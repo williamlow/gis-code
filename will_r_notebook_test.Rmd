@@ -1,22 +1,485 @@
-Will's test
-
-
-
 ---
-title: "R Notebook"
-output: html_notebook
+title: "GIS assessment - all parts"
+author: "ucfnwdl"
+date: "January 4, 2019"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+bibliography: GIS assessment.bib
 ---
+Word count: 2,923 (593,594,1736)
 
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
 
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+###Part 1 - Where do New Yorkers eat Japanese food, and where do Tokyoites eat American food?
 
-```{r}
-plot(cars)
+The two maps produced for this assignment are based on Foursquare data taken from Kaggle [@kaggle.com_foursquare_nodate]. The data covers 10 months of check-ins in New York city and Tokyo, between 12 April 2012 and 16 February 2013; a total of 227,428 check-ins in New York and 573,703 check-ins in Tokyo. Figure 1 is a sample of the New York data set, with irrelevant fields removed.
+
+```{r pt1_a, echo=FALSE, fig.align="center", fig.cap="Figure 1. New York data sample", out.width = '40%'}
+knitr::include_graphics("Figures/pt1_a.png")
 ```
 
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+OSM data was used to identify neighbourhoods in New York [@bbbike.org_osm_nodate]. Tokyo neighbourhoods had to be checked through google map searches, due to lack of alternative data.
 
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+This data will be used to show where individuals in New York City consume Japanese food and where individuals in Tokyo consume American food. This will be represented through heatmaps. Neighbourhoods with high concentrations of visits will be labelled. As much as possible, the two maps will be aesthetically similar.
 
-The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+Both map processes include manual digitization of neighbourhoods. While this would normally be avoided, particularly in R, it provides a useful point of comparison between the two applications used.
+
+The first map was produced in R, based on the Tokyo dataset. The summary workflow follows.  American restaurants were taken to include those with venue categories of 'American Restaurant', 'Rib joint', and 'Burger Joint'.
+
+```{r pt1_b, echo=FALSE, fig.align="center", fig.cap="Figure 2. R workflow", out.width = '80%'}
+knitr::include_graphics("Figures/pt1_b.png")
+```
+
+The second map was produced in QGIS, based on the New York dataset, using categories 'Japanese Restaurant', 'Sushi Restaurant' and 'Ramen / Noodle House'.
+
+```{r pt1_c, echo=FALSE, fig.align="center", fig.cap="Figure 3. QGIS workflow", out.width = '70%'}
+knitr::include_graphics("Figures/pt1_c.png")
+```
+
+Images of both maps follow as figures 4 and 5.
+
+```{r pt1_d, echo=FALSE, fig.align="center", fig.cap="Figure 4. R map: Where do Tokyoites eat American food?", out.width = '90%'}
+knitr::include_graphics("Figures/pt1_d.png")
+```
+
+
+```{r pt1_e, echo=FALSE, fig.align="center", fig.cap="Figure 5. QGIS map: Where do New Yorkers eat Japanese food?", out.width = '90%'}
+knitr::include_graphics("Figures/pt1_e.png")
+```
+
+Both maps are fit for purpose. They cannot be used to determine exact visit numbers to locations, but effectively communicate concentrations of visits across areas. Given the limited value in basemap information, a dark theme was chosen to complement the heatmaps. Legends show the scale of the heatmap, and neighbourhoods relevant to areas of concentration are labelled. Exact neighbourhood locations are ambiguous, reflecting available data.
+
+The heatmap function of Leaflet in R caused issues, providing slightly different visual results at different window sizes. As such the size of the window had to be fixed. Procedural generation of neighbourhood labels would circumvent this issue.
+
+These maps highlight some advantages and disadvantages of the applications used. In a scenario like this, in which the aesthetics of the map are a focus, there is an advantage to GUI applications. Visualization is a lynchpin of GUI GIS, and so it is easier to experiment with and adjust layouts, colouring, and design. In QGIS basemap brightness could be adjusted as a default setting. In R this was not possible, and so opacity had to be used as a substitute means of increasing brightness.
+
+Manual digitisation based on visual assessment is also considerably easier in QGIS. Points can be added to a new vector layer by simply clicking the required location. When composing the New York map, point data for neighbourhoods was added, and points not associated with hotspots selected and deleted.
+
+R is not intended for manual digitisation. A potential solution was using a click event via the Shiny package to extract coordinates, but a simpler option was the addition of the mapview package's addMouseCoordinates function. This displays coordinates at the mouse location, which could then be noted down, the neighbourhood determined, and then added to a dataframe.
+
+R is considerably better at reproducibility. The full code for the Tokyo map is listed in Appendix 1. Alternate data could be used, and with minor adjustments this code would produce a relevant map (though the issue of neighbourhood data would remain). This is more difficult in QGIS, in which a more detailed set of instructions would be required.
+
+### Part 2 - Spatial Analysis Methodologies
+
+The first five questions were answered using QGIS. The GUI can make working with unfamiliar spatial data easier: data is rendered graphically as a primary part of the workflow. When that workflow involves functions such as buffers and intersection, the visual aspect can be useful.
+
+The final question was completed in R, due to the strength and ease of point pattern analysis, and also to allow visualization of the final result on an interactive map.
+
+**Questions 1-5**
+
+The team 7 geojson file was loaded into QGIS and converted to a geopackage in EPSG 27700, an appropriate CRS for use in the UK. This also changes units to meters.
+The treasure hunt locations were loaded from the CSV through the add delimited text layer function. One point, Platform 9 and 3/4s, had erroneous coordinate values, placing it far outside of the UK. These were corrected, and the file was also saved as a EPSG 27700 geopackage.
+
+Finally, the London stations and London ward data (with additional social indicators) were added and saved as EPSG 27700 geopackages. Due to availability of social data, the City of London is treated as a single ward for analysis purposes.
+
+1.	The field calculator was used with expression `$length`. The route was 46.6km in length.
+
+2.	A 100m buffer was drawn from the route, and the 'Select by location' function used to select the stations within. There were 24.
+
+```{r pt2_q2, echo=FALSE, fig.align="center", fig.cap="Figure 6. QGIS UI during question 2, showing line buffer and selected stations", out.width = '80%'}
+knitr::include_graphics("Figures/pt2_q2.png")
+```
+
+3.	A 300m buffer was drawn around each location (alternatively the previous method of buffering the route could be used). 'Select by location' was used to select those intersecting the route, and 'Extract selected features' used to create a new layer with the selected locations. The field calculator with expression `sum( "Points")` determined that the score based on locations within 300m was 62.
+
+4.	 'Select by location' and 'Extract selected features' were used to create a new layer of wards intersecting the route. The attribute table was checked (sorting by Male Life Expectancy). The lowest was tied between Bethnal Green South and Weavers with 74.8, and the highest was the City of London with 82.8 (the latter being treated as a single ward).
+
+```{r pt2_q4, echo=FALSE, fig.align="center", fig.cap="Figure 7. QGIS UI during question 4, showing extracted ward polygons and route line", out.width = '80%'}
+knitr::include_graphics("Figures/pt2_q4.png")
+```
+
+5.	The same layer was used to determine average life expectancy across all wards entered. The expression `mean( "MaleLE0509")` gave a male average life expectancy of 77.98, `mean( "FemaleLE05")` gave a female life expectancy of 83.56, and `(mean( "MaleLE0509" )+mean( "FemaleLE05" ))/2` gave a combined average of 80.77.
+
+**Question 6**
+
+Address locations were saved from QGIS as a EPSG 2700 shapefile and loaded into R with readOGR. All London wards were dissolved into a single vector, which was also loaded into R with readOGR.
+
+6.	This methodology follows that of the sixth practical session. The code used is in Appendix 2. A kernel density plot shows concentration of locations around the centre of the city. A sigma of 1000 communicated concentration without losing detail within hotspot areas.
+
+```{r pt2_q6a, echo=FALSE, fig.align="center", fig.cap="Figure 8. Kernel density plot", out.width = '80%'}
+knitr::include_graphics("Figures/pt2_q6a.png")
+```
+
+Ripley's K depicts clear signs of clustering, diverging increasingly from the Poisson line at greater distances: unsurprising given the presence of points in the central area only.
+
+```{r pt2_q6b, echo=FALSE, fig.align="center", fig.cap="Figure 9. Ripley's K plot", out.width = '80%'}
+knitr::include_graphics("Figures/pt2_q6b.png")
+```
+
+A DBSCAN analysis was conducted. The Ripley's K does not suggest particularly relevent parameters, but we can reason that 3 points would be considered a cluster, and that 1500m would be a reasonable distance. The analysis highlights three clusters.
+
+```{r pt2_q6c, echo=FALSE, fig.align="center", fig.cap="Figure 10. DBSCAN analysis plot", out.width = '80%'}
+knitr::include_graphics("Figures/pt2_q6c.png")
+```
+
+These clusters can then be added to a leaflet map, along with the original points, and a basemap to make them easier to interpret. Highlighting or clicking the points shows their name. This could help future teams plan efficient routes to maximize benefit from clustering.
+
+```{r pt2_q6d, echo=FALSE, fig.align="center", fig.cap="Figure 11. Image of Leaflet interactive map", out.width = '90%'}
+knitr::include_graphics("Figures/pt2_q6d.png")
+```
+
+###Part 3 - Shiny tool to determine impact of UK constituency boundary change on a postcode
+
+**Project introduction**
+
+The UK political constituency boundaries are currently under review by the Boundary Commission for England. In September 2018 they published their final recommendations, available to the public on their website. The organization does in fact provide a simple postcode lookup on their website [@bce_bce_nodate], but it has limited functionality and cannot easily be used to determine if a postcode will be under the same constituency as before.
+
+In response to this perceived gap, the focus of this project is the development of a web application to allow a user to enter an English postcode and return imagery of the location and relevant constituencies from before and after the proposed changes, accompanied by explanatory text. The tool could then be adapted for use with any similar context. Additionally, the application should be suitable for both desktop and mobile use.
+
+**Software**
+
+R will be used for this project, with an intent to produce a Shiny web app. This will enable it to be easily hosted online, and accessible to the public. Packages used for handling data are 'SF' (simple features for R) and 'data.table'. Maps are plotted with the 'ggplot' package. 'Shiny' is used to build the web application, and 'shinycssloaders' provides loading animations while the application is responding to a postcode input.
+
+QGIS was also used for preparation of boundary and postcode data.
+
+**Data**
+
+Data on the new, proposed boundaries is provided through the Boundary Commission for England's website as a Shapefile. The existing boundary data is taken from the Open Geography Portal of the Office for National Statistics, and also included constituencies in Scotland and Wales [@ons_westminster_nodate]. The current review only affects England's boundaries, but the border of the updated constituencies with Scotland and Wales remains the same. These were therefore removed from the Shapefile without issue.
+
+There was some discrepancy in constituency naming conventions between the two boundary data sets. The original boundary data includes in the name field whether the feature is a borough or county constituency. This detail is irrelevant to this project, and was removed using the QGIS field calculator with the expression `trim( replace(  "NAME" ,array(' Co ','Boro','Const'),''))`.
+
+Some constituency names have changed due to adjustments made as part of the boundary review process. It is intended that these do not match constituencies from the original file. Figure 12 shows a sample of paired names from both files prior to data cleaning. New constituency names have been highlighted.
+
+```{r pt3_data1, echo=FALSE, fig.align="center", fig.cap="Figure 12. Matching constituency boundary data, with new constituencies highlighted", out.width = '70%'}
+knitr::include_graphics("Figures/pt3_data1.png")
+```
+
+Finally, a CSV of UK postcode data was taken from freemaptools.com, providing latitude and longitude values for all UK postcodes [@freemaptools_download_nodate]. This data was trimmed to only include England postcodes, through use of the 'Select by location' and 'Extract selected features' functions of QGIS.
+
+**Application structure**
+
+Figure 13 shows the overall process that the application follows with respect to its R functionality. This has subsequently been placed inside a Shiny application structure, shown in figure 14. The full code for the application is contained in Appendix 3.
+
+```{r pt3_flow_r, echo=FALSE, fig.align="center", fig.cap="Figure 13. R code structure", out.width = '90%'}
+knitr::include_graphics("Figures/picture6.tif")
+```
+
+Shiny applications are made up of two sections of code: the UI, which controls what the user interacts with and sees, including outputs of any code, and the server, which controls how the app reacts to user inputs. Additional code can also be placed outside of these two sections. This is valuable, as code outside the server function is run only once per session, meaning that loading of csv and shapefile data is not repeated with each user input.
+
+```{r pt3_shiny, echo=FALSE, fig.align="center", fig.cap="Figure 14. Shiny application structure", out.width = '90%'}
+knitr::include_graphics("Figures/Picture7.tif")
+```
+
+
+**Application development**
+
+A number of issues were encountered during the development of the application.
+
+1.	Geocoding
+
+    Two options were considered for geocoding the postcodes users provide. Firstly, passing the postcode to an online geolocation service. This has become more complicated in R, as Google now requires an API key and billing activation. Other services can be unreliable, often returning null results due to server overload. Instead, a CSV file containing all UK postcodes and their latitude and longitude was used. This is a large file containing 1.7m rows, read into a data frame. When the user enters the postcode, a `which` function finds the matching line in the data frame.
+
+2.	Postcode format and case
+
+    Postcodes in the UK are usually written with a space between two sets of characters, for example W1T 4TJ. However the user may also enter this as W1T4TJ. Additionally, the user might enter the postcode in lowercase characters. In order to accommodate these possibilities, the postcode reference data was edited to remove spaces, and user input is subject to the code `toupper(gsub(" ","",target_postcode, fixed=TRUE))`, which removes any spaces entered and changes any lowercase characters to uppercase.
+
+3.	Processing time
+
+    Initial versions of the R code suffered extremely slow speeds, which in a user-facing application would be problematic. The main source of this issue was the boundary data. The original and updated boundary data consists of 533 and 501 polygons respectively, each with a high degree of complexity. Reading and plotting this data is extremely slow. A typical solution to this issue would be to simplify the polygons, reducing their complexity and so file size and processing time. However in this particular application this is not possible, as simplification would cause movement of boundary lines: postcodes would be incorrectly allocated to constituencies.
+
+    One solution considered was the placing of a bounding box of fixed size, centered on the postcode location. This box would then be used to crop the original boundary polygons before they are passed to ggplot. This was problematic however given the extreme variability in constituency size. Larger, rural constituencies might fill the bounding box completely, smaller ones would be lost amongst several smaller urban neighbours.
+
+    The chosen solution was to use the postcode coordinates to select the polygon they were contained within in the original boundary data. The bounding box of this polygon is then taken, and expanded in each direction by 50% of its vertical and horiztonal measurements. This prevents scaling issues as it produces a new bounding box appropriate to the selected polygon. This change considerably improved operation time.
+
+    Additional improvement to speed was also made by the use of the fread() function, from the data.table package. Fread is significantly faster than read.csv, particularly at large file sizes [@gillespie_efficient_nodate].
+
+    Finally, since the application still requires some perceptible processing time, loading animations were added to the final shiny app using the shinycssloaders package. This reassures the user during the processing period that the application is working.
+
+4.	Polygon colouring
+
+    Since the maps are paired, there should be continuity between the colouring of constituencies. Initially, colours would be allocated to polygons by ggplot during the plotting process, making them harder to quickly interpret and suggesting a change of some kind. To avoid this, the shapefiles were opened in QGIS, and the 'Topological Colouring' tool applied to the original boundary data. This tool appends a colour index to polygon data in such a way that no touching polygons have the same colour, while also minimising the number of colours used: in this case six.
+
+    The 'join by attribute' function was used to join this colour index to the new boundary data, with the constituency name as the target field. All constituencies with the same name in both sets of data would therefore have the same colour index. Those without an index are new constituencies, or old ones sufficiently altered that their name has been changed. The colour index of these was set to 7.
+
+    A manual colour scale was added to the application in R, based on a colorbrewer scale, Pastel2 [@colorbrewer_colorbrewer:_nodate]. This is assigned to a variable that is passed via the `scale_fill_manual` function for the two ggplots, ensuring that constituencies are correctly coloured across both. New constituencies all share a single colour.
+
+    A custom theme was also generated for both maps. No axis or legend were included for the maps, as the design is intended to be simple and self-explanatory.
+
+5.	Bad user input
+
+    Users may input invalid postcodes, or other problematic input. To catch these inputs, an `if` function was added immediately after the user string is checked against the postcode data. If the resulting variable is empty, the code ends and returns the value "error" to the Shiny reactive variable, in place of a list containing the two map plots and accompanying text.
+
+    Shiny code then checks for this error value, and if found passes "Postcode not found" for display next to the input area. Default Shiny behaviour also prevents problematic errors due to the absence of plots and text.
+
+**Evaluation of software**
+
+Figures 15 to 18 below are images of the completed application. The full code is available in Appendix 3. A working copy is also hosted online at [william-low.shinyapps.io/English-boundary-change-postcode-check-tool/](william-low.shinyapps.io/English-boundary-change-postcode-check-tool/). Some example postcodes for demonstration use are W1T 4TJ, S10 2TN and DL6 3EA. The latter is a very large constituency, causing longer processing time.
+
+```{r pt3_app1, echo=FALSE, fig.align="center", fig.cap="Figure 15. Application when first opened", out.width = '90%'}
+knitr::include_graphics("Figures/pt3_app1.png")
+```
+ 
+
+```{r pt3_app2, echo=FALSE, fig.align="center", fig.cap="Figure 16. Application when postcode is subject to change", out.width = '90%'}
+knitr::include_graphics("Figures/pt3_app2.png")
+```
+ 
+
+```{r pt3_app3, echo=FALSE, fig.align="center", fig.cap="Figure 17. Application when postcode is not subject to change", out.width = '90%'}
+knitr::include_graphics("Figures/pt3_app3.png")
+```
+ 
+
+```{r pt3_app4, echo=FALSE, fig.align="center", fig.cap="Figure 18. Application when invalid input is provided", out.width = '90%'}
+knitr::include_graphics("Figures/pt3_app4.png")
+```
+
+
+The application is fit for purpose, providing the user with clear and unambiguous information around how the specified location will be affected by the proposed boundary changes. Since the software was developed in R and Shiny, it is easily reproducible and could be adapted to other similar contexts with relative ease. It works on both desktop and mobile platforms.
+
+There are a number of areas in which the application could be developed or potentially improved. If the maps produced were interactive, perhaps drawn in the Leaflet package, a mouse click event could be added to trigger the code focused on the point specified. This would allow users to explore the changes without needing to provide postcodes.
+
+The shape of the map windows are currently dependent on those of the targeted polygons, which introduces a volatile element to the UI. Additional calculations could be made in order to build a bounding box to a specific ratio, solving this issue.
+
+Additional information on constituencies could be added to a database and provided to the user. This could include information on the current MP, demographics of the constituency, and the proposed change in size.
+
+Further experimentation might also improve the speed of the application. For example, the larger bounding boxes that are generated during the code (from the bounding boxes of the polygon containing the target postcode) could be calculated in advance, and their specifications added to the data frame attached to the polygons. This might speed up the application by avoiding the need to complete the spatial function during each use of the code.
+
+###Appendix 1###
+
+**R code for Tokyo map**
+
+```
+library(sf)
+library(leaflet)
+library(leaflet.extras)
+library(mapview)
+
+#read in data, trim to venue category and coords
+tokyo_all_points <- read.csv("dataset_TSMC2014_TKY.csv", header = TRUE, sep = ",")
+tokyo_all_points <- tokyo_all_points[,4:6]
+
+#trim to just US restaurants
+tokyo_us_rest <- subset(tokyo_all_points,venueCategory %in% c("American Restaurant", "Burger Joint", "Wings Joint"))
+
+#convert to SP for plotting
+tky_SP <- st_as_sf(tokyo_us_rest, coords = c("longitude", "latitude"), crs = 4326)
+
+#add to map using leaflets own heatmappng
+#add mapview addmousecoords to find location of hot spots and put into google for labelling. Could also potentially do click event using Shiny.
+leaflet(tky_SP, width = 760, height = 501) %>%
+  addHeatmap(blur = 20, max = 0.05, radius = 10) %>%
+  addTiles("http://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png",
+           attribution = paste(
+             "&copy; <a href=\"http://openstreetmap.org\">OpenStreetMap</a> contributors",
+             "&copy; <a href=\"http://cartodb.com/attributions\">CartoDB</a>")) %>%
+  setView(139.6983727, 35.6521486, zoom = 11) %>%
+  addMouseCoordinates()
+
+#manually add relevent neighbourhood points and make SP
+tokyo_neigh <- data.frame("Neighbourhood" = c("Akabane","Shinjuku","Tomigaya","Kamazawa","Nakane","Tsunashima","Otemachi","Funabori","Odaiba","Kamata"),"Long" = c(139.77290,139.6980,139.6900,139.6590,139.6768,139.6380,139.7668,139.8560,139.7770,139.7146),"Lat" = c(35.7738,35.6930,35.6700,35.6327,35.6160,35.5420,35.6874,35.6846,35.6277,35.5624))
+
+tky_neigh_SP <- st_as_sf(tokyo_neigh, coords = c("Long", "Lat"), crs = 4326)
+
+#plot with neighbourhoods
+leaflet(width = 760, height = 501) %>%
+  addHeatmap(data=tky_SP, blur = 20, max = 0.05, radius = 10) %>%
+  addLabelOnlyMarkers(data = tky_neigh_SP, label = ~Neighbourhood, labelOptions = labelOptions(noHide = TRUE, direction = 'left', textOnly = TRUE, style = list("color" = "white","font-size" = "15px","font-weight" = "bold"))) %>%
+  addTiles("http://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png", options=tileOptions(opacity = 0.9),
+           attribution = paste(
+             "&copy; <a href=\"http://openstreetmap.org\">OpenStreetMap</a> contributors",
+             "&copy; <a href=\"http://cartodb.com/attributions\">CartoDB</a>"
+           )
+  ) %>% setView(139.6983727, 35.6521486, zoom = 11) %>% 
+  addLegend("bottomright", 
+          colors =c("#f92301",  "#ed6603", "#d8c207", "#0cba28", "#0fa3a1", "#162382"),
+          labels= c("more", "","","", "", "less"),
+          title= "Recorded visits",
+          opacity = 1)
+```
+
+###Appendix 2###
+
+**R code for question 6**
+
+```
+library(spatstat)
+library(rgdal)
+library(raster)
+library(leaflet)
+library(maptools)
+library(plyr)
+library(ggplot2)
+
+
+#Import data and check on map
+hunt_addresses <- readOGR("hunt_addresses_fixed_BNG.shp")
+london <- readOGR("london_merged_BNG.shp")
+
+#Prepare data for spatstat, check on map
+window <- as.owin(london)
+hunt_locs.ppp <- ppp(x=hunt_addresses@coords[,1],y=hunt_addresses@coords[,2],window=window)
+
+#Kernal density plot
+plot(density(hunt_locs.ppp, sigma = 1000), main="Hunt locations")
+
+#ripley's K plot
+K <- Kest(hunt_locs.ppp, correction="border")
+plot(K)
+
+#DBScan
+
+hunt_address_points <- data.frame(hunt_addresses@coords[,1:2])
+dbscan_output <- fpc::dbscan(hunt_address_points, eps = 1500, MinPts = 3)
+plot(dbscan_output, hunt_address_points, main = "DBSCAN Output Results", frame = F)
+
+#make map with cluster polygons
+
+hunt_address_points$cluster <- dbscan_output$cluster
+
+chulls <- ddply(hunt_address_points, .(cluster), function(dbscan_output) dbscan_output[chull(dbscan_output$coords.x1, dbscan_output$coords.x2), ])
+
+chulls <- subset(chulls, cluster>=1)
+
+col_scale_cluster <- c("1"="red","2"="blue","3"="green")
+
+ggplot(data=hunt_address_points, aes(coords.x1,coords.x2))+
+  geom_point()+
+  scale_fill_manual(values = col_scale_cluster)+
+  geom_polygon(data = chulls, aes(coords.x1,coords.x2, group=cluster, colour=factor(cluster), fill=factor(cluster)), alpha = 0.5)
+
+
+#WGS version for leaflet
+latlong <- "+init=epsg:4326" 
+londonWGS <-spTransform(london, CRS(latlong))
+addressesWGS <- spTransform(hunt_addresses, CRS(latlong))
+
+#This code to make an sp from chulls is adapted from https://gis.stackexchange.com/questions/171124/data-frame-to-spatialpolygonsdataframe-with-multiple-polygons
+chull_list <- split(chulls, chulls$cluster)
+chull_list <- lapply(chull_list, function(x) { x["cluster"] <- NULL; x })
+chulls_x <- sapply(chull_list, Polygon)
+chulls_x <- lapply(chull_list, Polygon)
+chulls_y <- lapply(seq_along(chulls_x), function(i) Polygons(list(chulls_x[[i]]), ID = names(chull_list)[i]  ))
+chulls_sp <- SpatialPolygons(chulls_y, proj4string = CRS("+proj=tmerc +lat_0=49 +lon_0=-2 +k=0.9996012717 +x_0=400000 +y_0=-100000 +datum=OSGB36 +units=m +no_defs +ellps=airy +towgs84=446.448,-125.157,542.060,0.1502,0.2470,0.8421,-20.4894") )
+
+chullsWGS <- spTransform(chulls_sp, CRS(latlong))
+
+leaflet() %>% addPolygons(data = chullsWGS, fillColor = "navy", fillOpacity = 0.6, stroke = FALSE) %>%
+  addCircleMarkers(data = addressesWGS, popup = ~Location, label = ~Location, radius = 5, color = "red", fillOpacity = 0.6, stroke = FALSE) %>%
+  addProviderTiles(providers$Stamen.TonerLite)
+  
+```
+
+###Appendix 3###
+
+**R code for Shiny application**
+
+```
+library(shiny)
+library(ggplot2)
+library(sf)
+library(data.table)
+library(shinycssloaders)
+
+#This app is hosted online at https://william-low.shinyapps.io/English-boundary-change-postcode-check-tool/
+
+# Read in data and prepare colour scale for plots
+orig_a = st_read("orig_a_shp.shp")
+final_recs = st_read("final_recs_shp.shp")
+
+postcode_data <- fread("england_postcodes_no_space.csv")
+
+map_theme <- theme_void()+
+  theme(plot.title = element_text(size=16, face="bold",hjust = 0.5, vjust = 3))+
+  theme(plot.margin = unit(c(0,2,0,2), "pt"))+
+  theme(legend.position="none")
+
+theme_set(map_theme)
+
+col_scale <- c("1"="#b3e2cd","2"="#fdcdac","3"="#cbd5e8","4"="#f4cae4","5"="#e6f5c9","6"="#fff2ae","7"="#f1e2cc")
+
+# Build the Shiny UI
+ui <- fluidPage(
+  # A panel to contain the user input section of the UI
+  wellPanel(
+  # The title and introductory text of the application
+    titlePanel("Check constituency changes"),
+    p("In September 2018, the Boundary Commission for England published ", a("final recommendations", href="https://boundarycommissionforengland.independent.gov.uk/2018-review/"), " on proposed changes to constituency boundaries in England. This tool shows if a given postcode location will be affected by the changes."),
+  # Input field for the postcode, and action button to activate code
+  textInput(inputId = "postcode_in",
+            label = "Enter a postcode",
+            value = ""),
+  actionButton(inputId = "execute", 
+               label = "Check postcode"),
+  # Looks for an error report output to display
+  fluidRow(span(textOutput("error_report"),style ="color:red"))
+  ),
+  # Looks for the explanatory text that accompanies the maps
+  fluidRow(h3(textOutput("header"),style="text-align:center; margin-bottom:50px")),
+  fluidRow(
+  # Looks for the two maps, with loading animations while they are being plotted
+  column(6, withSpinner(plotOutput("plot1"), type=8)),
+  column(6, withSpinner(plotOutput("plot2"), type=8)))
+)
+
+# The Shiny server
+server <- function(input, output){
+  r_outputs <- eventReactive(input$execute,{
+
+    # Takes the provided postcode, removes any spaces and makes it all capitals 
+    target_postcode <- input$postcode_in
+    no_space_caps <- toupper(gsub(" ","",target_postcode, fixed=TRUE))
+    # Looks for the postcode in the postcode reference data, returning name and coords
+    target_postcode <- postcode_data[which(postcode_data$postcode == no_space_caps)]
+    # r_outputs is set to "error" if postcode is not valid
+    if(nrow(target_postcode) == 0) {return("error")}
+    else{
+    # if found, an sf file is created from the retrieved data
+    target_sf<- st_as_sf(target_postcode, coords = c("longitude", "latitude"), crs = 4326)
+    
+    # finds the polygon that the postcode is inside
+    target_poly <- orig_a[as.numeric(st_intersects(target_sf,orig_a)),]
+    target_poly_FR <- final_recs[as.numeric(st_intersects(target_sf,final_recs)),]
+    target_poly_FR_name <- final_recs[as.numeric(st_intersects(target_sf,final_recs)),]$name
+    
+    # takes the bbox of the polygon and increases it's size
+    base_bbox <- st_bbox(target_poly)
+    x_add <- as.numeric((base_bbox[3]-base_bbox[1])/2)
+    y_add <- as.numeric((base_bbox[4]-base_bbox[2])/2)
+    new_bbox <- c(base_bbox[1]-x_add,base_bbox[2]-y_add,base_bbox[3]+x_add,base_bbox[4]+y_add)
+    
+    # crops the boundary polygon files to the new bbox
+    final_recs_crop <- st_crop(final_recs,new_bbox)
+    final_recs_crop <- cbind(final_recs_crop,st_coordinates(st_centroid(final_recs_crop)))
+    orig_crop <- st_crop(orig_a,new_bbox)
+    orig_crop <- cbind(orig_crop,st_coordinates(st_centroid(orig_crop)))
+    
+    # plots the first map
+    plot1 <- ggplot (data = orig_crop) +
+      geom_sf(aes(fill = factor(colour_id)))+
+      geom_text(aes(x=X,y=Y,label=name),check_overlap = TRUE)+
+      geom_sf(data = target_sf, size = 6, shape = 21, fill="red", color="black")+
+      coord_sf(expand = FALSE)+
+      scale_fill_manual(values = col_scale)+
+      ggtitle("Original boundaries")
+    
+    # plots the second map
+    plot2 <- ggplot (data = final_recs_crop) +
+      geom_sf(aes(fill = factor(colour_id)))+
+      geom_text(aes(x=X,y=Y,label=name),check_overlap = TRUE)+
+      geom_sf(data = target_sf, size = 6, shape = 21, fill="red", color="black")+
+      coord_sf(expand = FALSE)+
+      scale_fill_manual(values = col_scale)+
+      ggtitle("New boundaries")
+    
+    # builds the explanatory text that accompanies the maps
+    if(target_poly$name==target_poly_FR_name){header <- paste("This location will remain in the same constituency. After the changes it will still be in ",as.character(target_poly$name),".",sep="")}else{header <- paste("The constituency of this location will change. It is currently in ",as.character(target_poly$name)," but after the changes will be in ",as.character(target_poly_FR_name),".",sep="")}
+
+    # sets r_outputs to a list containing the two maps and the text
+    return(list(plot1,plot2,header))}
+  })
+  
+  # shiny output values that check for an error, and the maps and text, and render the results
+  output$error_report <- renderText({if(r_outputs() == "error"){"Postcode not found"}})
+  output$plot1 <- renderPlot({r_outputs()[1]})
+  output$plot2 <- renderPlot({r_outputs()[2]})
+  output$header <- renderText({as.character(r_outputs()[3])})
+} 
+
+shinyApp(ui = ui, server = server)
+
+```
+
+###Bibliography###
+
